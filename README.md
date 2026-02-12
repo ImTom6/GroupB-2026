@@ -1,2 +1,2 @@
-# GroupB-2016
-# This is the repo for Group B 2016 project
+# GroupB-2026
+# This is the repo for Group B 2026 project
