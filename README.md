@@ -10,4 +10,9 @@
 - This project follows the work of Camp, J.G. et al. (2015). Human cerebral organoids recapitulate gene expression programs of fetal neocortex development. PNAS, 112(51), pp.15672–15677.
 
 - Group Members:
-- 
+  - Ali A 
+  - Hari N
+  - Rohit T 
+  - Tess I
+  - Thomas M 
+
