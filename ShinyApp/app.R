@@ -6,36 +6,21 @@
 # Last edited: 24/04/26. Tom
 
 library(shiny)
-library(bslib)
+#library(bslib)
 library(ggplot2)
 library(plotly)
 library(Seurat)
-library(patchwork)
-library(stringr)
-library(dplyr)
+#library(patchwork)
+#library(stringr)
+#library(dplyr)
 library(viridis)
 library(DT)
-
-# Needed for python to R conversion (For scanpy figure)
-library(anndata)
-library(reticulate)
-library(Matrix)
-py_require("scanpy")
-py_require("matplotlib")
-sc <- import("scanpy")
-plt <- import("matplotlib.pyplot")
-
-
-
-
 
 
 ### PREPARATION ###
 
 # Colour palettes
 colour_palette <- c('magma', 'inferno', 'plasma', 'viridis', 'cividis', 'rocket', 'mako', 'turbo')
-# Some viridis colours dont workin matplotlib, therefore different colour scheme created for python graph
-py_colour_palette <- c('magma', 'inferno', 'plasma', 'viridis', 'cividis', 'turbo')
 
 ### Preparation for original figure 2A
 original2A_DF <- read.csv("./files/Original2A.csv", header = TRUE, row.names = 1)
@@ -43,27 +28,21 @@ original2A_DF <- read.csv("./files/Original2A.csv", header = TRUE, row.names = 1
 ### Preparation for original figure 2B (Zones)
 original2B_Zones_DF <- read.csv("./files/Original2B_Zones.csv", header = TRUE, row.names = 1)
 
-### Preparation for original figure 3D
-originalpipeline_tsne <- read.csv("./files/OriginalPipeline_tSNE.csv")
+### Preparation for original figure 3D, 3E
+seurat_organoid <- readRDS("./files/Camp2015_organoid_final.rds")
 
 ### Preparation for original figure 3E
-# Load seurat object for figureplot
-seu <- readRDS("./files/OriginalPipeline.rds")
-
-# Load correct gene names and corresponding ids
-originalDF_3E <- read.csv("./files/Original3E_GeneNames", header = TRUE, row.names = 1)
-
-# Set gene names to show user in ui menu
-genes_fig3E <- c("FOXG1", "OTX2", "RSPO2", "DCN", "ASPM", "LIN28A", "MYT1L", "NEUROD6")
+genes_3e <- c("FOXG1", "OTX2", "RSPO2", "DCN",
+              "ASPM", "LIN28A", "MYT1L", "NEUROD6")
 
 ### Preparation for original figure 3F
-# Load in csvs into dataframes and save gene names to be shown to user
-FOXG1_3F <- read.csv("./files/FOXG1_3F.csv", header = TRUE, row.names = 1)
-NEUROD6_3F <- read.csv("./files/NEUROD6_3F.csv", header = TRUE, row.names = 1)
-OTX2_3F <- read.csv("./files/OTX2_3F.csv", header = TRUE, row.names = 1)
+seurat_3f <- readRDS("./files/Camp2015_fig3f.rds")
 
-# Set gene names to show user in ui menu
-genes_fig3F <- c("FOXG1", "NEUROD6", "OTX2")
+genes_3f <- c("FOXG1", "NEUROD6", "OTX2")
+genes_3f <- genes_3f[genes_3f %in% rownames(seurat_3f)]
+
+Idents(seurat_3f) <- factor(seurat_3f$region_group,
+                            levels = c("r1","r2","r3","r4","fetal"))
 
 ### Preparation for alternative figure 3D
 # Load alternate scanpy pipeline output to plot alt tsne graph
@@ -71,8 +50,9 @@ altpipeline_tsne <- read.csv("./files/export_tsne.csv")
 
 ### Preparation for alternate figure 3E
 # This requires the use of anndata.
-adata = read_h5ad("./ScanPy/output.h5ad")
+scpy_data <- readRDS("./files/scpy_data.rds")
 
+# Markers identified from scanpy pipeline
 markers_present <- c("FOXG1", "NFIA", "NFIB", "NEUROD6",
                      "BCL11A", "DCX", "OTX2", "FABP7",
                      "BCAT1", "GAD1", "DLX6", "WNT2B",
@@ -81,7 +61,7 @@ markers_present <- c("FOXG1", "NFIA", "NFIB", "NEUROD6",
 
 ### Preparation for alternate figure 3F
 # Importing data and renaming to work just like the original pipeline for simplicity 
-df_alt3F <- read.csv("export_violin_data.csv", row.names = 1)
+df_alt3F <- read.csv("./files/export_violin_data.csv", row.names = 1)
 FOXG1_Alt_3F <- select(df_alt3F, c('FOXG1','group'))
 NEUROD6_Alt_3F <- select(df_alt3F, c('NEUROD6','group'))
 OTX2_Alt_3F<- select(df_alt3F, c('OTX2','group'))
@@ -95,12 +75,6 @@ figure_legend <- read.table("./files/figure_legends.txt", sep="\n",header=F)
 
 # Text to be placed at bottom of each figure tab to credit original paper
 citation <- read.table("./files/citations.txt", sep="\n", header=F)
-
-
-
-
-
-
 
 
 ### UI ###
@@ -266,8 +240,14 @@ ui <- tagList(
                             column(3, selectizeInput( 
                               "original3E_featureSelect", 
                               "Select Gene:", 
-                              choices = c(genes_fig3E), 
-                              multiple = FALSE))
+                              choices = c(genes_3e), 
+                              multiple = FALSE)),
+                            
+                            column(2, sliderInput(
+                              "og_3E_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
                           ),
                           
                           fluidRow(
@@ -333,6 +313,86 @@ ui <- tagList(
                tabsetPanel(
                  
                  # Alternative pipeline figure 3D
+                 tabPanel("Figure 2A",
+                          fluidRow(
+                            
+                            # Select colour palette
+                            column(2, radioButtons(
+                              "alt_2A_palette", "Select Colour Palette",
+                              choices = colour_palette, selected = colour_palette[4],
+                            )),
+                            
+                            # Plot figure
+                            column(5, plotlyOutput("altfig_2A")),
+                            
+                            # # Display figure legend
+                            column(2, paste(figure_legend[1,])),
+                          ),
+                          
+                          fluidRow(
+                            
+                            # Slider for data point opacity
+                            column(2, sliderInput(
+                              "alt_2A_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
+                          ),
+                          
+                          fluidRow(
+                            column(6, paste("Data Table"))
+                          ),
+                          
+                          # Show data frame used to plot figure
+                          fluidRow(
+                            column(12, dataTableOutput("alt_2A_Table"))
+                          ),
+                          
+                          # Bottom of page original paper credit
+                          fluidRow(
+                            column(12, paste(citation[1,]))
+                          ),),
+                 
+                 tabPanel("Figure 2B",
+                          fluidRow(
+                            
+                            # Select colour palette
+                            column(2, radioButtons(
+                              "alt_2B_Zone_palette", "Select Colour Palette",
+                              choices = colour_palette, selected = colour_palette[4],
+                            )),
+                            
+                            # Plot figure
+                            column(5, plotlyOutput("alt_fig_2B_zone")),
+                            
+                            # # Display figure legend
+                            column(2, paste(figure_legend[1,])),
+                          ),
+                          
+                          fluidRow(
+                            
+                            # Slider for data point opacity
+                            column(2, sliderInput(
+                              "alt_2A_zone_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
+                          ),
+                          
+                          fluidRow(
+                            column(6, paste("Data Table"))
+                          ),
+                          
+                          # Show data frame used to plot figure
+                          fluidRow(
+                            column(12, dataTableOutput("alt_2A_zone_Table"))
+                          ),
+                          
+                          # Bottom of page original paper credit
+                          fluidRow(
+                            column(12, paste(citation[1,]))
+                          ),),
+                 
                  tabPanel("Figure 3D",
                           fluidRow(
                             
@@ -388,11 +448,11 @@ ui <- tagList(
                             # Select colour palette
                             column(2, radioButtons(
                               "alt_3E_palette", "Select Colour Palette",
-                              choices = py_colour_palette, selected = colour_palette[4]
+                              choices = colour_palette, selected = colour_palette[4]
                             )),
                             
                             # Plot figure
-                            column(5, plotOutput("altfig_3E")),
+                            column(5, plotlyOutput("altfig_3E")),
                             
                             # Display figure legend
                             column(2, paste(figure_legend[5,])),
@@ -408,9 +468,9 @@ ui <- tagList(
                           
                             # Slider to change maximum dot size
                             column(2, sliderInput(
-                              "alt_3E_max", "Max Dot Size",
-                              min = 0, max = 1,
-                              value = 1
+                              "alt_3E_max", "Dot Scale",
+                              min = 0, max = 10,
+                              value = 4
                           ))),
 
                           fluidRow(
@@ -473,7 +533,7 @@ ui <- tagList(
     # Final tab to give credit to group members and original paper authors
     tabPanel("Credit",
              fluidPage(
-               paste("Credit group members, authors, and github")
+               paste("Credit group members, authors, and github .This research used the ALICE High Performance Computing facility at the University of Leicester.")
              )
     )
 ))
@@ -548,124 +608,62 @@ server <- function(input, output) {
   
   # Plot original 3D graph
   output$originalfig_3D <- renderPlotly({
-    Original_tSNEPlotlyObj <- plot_ly(originalpipeline_tsne,
-                                      x = originalpipeline_tsne$tSNE1,
-                                      y = originalpipeline_tsne$tSNE2,
-                                      
-                                      # Gets user input for colour palette, and changes colours based on grouping selected
-                                      color = get(input$originalpipeline_colour, originalpipeline_tsne),
-                                      colors = viridis_pal(option = input$og_3D_palette)(7),
-                                      
-                                      type = "scatter",
-                                      mode = "markers",
-                                      
-                                      # User input of data point opacity 
-                                      alpha = input$og_3D_alpha,
-                                      
-                                      # Changes mouse hover text
-                                      text = paste("Cell: ", originalpipeline_tsne$sample, "\n","Cluster: ", originalpipeline_tsne$cluster_code, sep = "")
-                                      )
-    
-    # Adding cluster label annotations at centroids
-    # Setting location of cluster label based on the mean of datapoints for that cluster
-    originalcentroids <- originalpipeline_tsne |> group_by(cluster_code)|> summarise(x_mean = mean(tSNE1), y_mean = mean(tSNE2))
-    
-    # Adding the annotations onto the graph
-    add_annotations(
-      p= Original_tSNEPlotlyObj, 
-      text = paste(originalcentroids$cluster_code),
-      data = originalcentroids, 
-      x = originalcentroids$x_mean, y = originalcentroids$y_mean, 
-      showarrow = FALSE
-    )
+    fig3d <- DimPlot(seurat_organoid,
+                     reduction = "tsne",
+                     label = TRUE,
+                     label.size = 3,
+                     pt.size = 1.5,
+                     repel = TRUE,
+                     cols = viridis_pal(option = input$og_3D_palette)(11),
+                     alpha = input$og_3D_alpha,
+                     shape.by = "shape_group") +
+      scale_shape_manual(values = c(
+        "33d" = 16, "35d" = 17, "37d" = 25,
+        "65d" = 15, "41d" = 18,
+        "r1 53d" = 0, "r2 53d" = 5,
+        "r3 58d" = 1, "r4 58d" = 2)) +
+      theme_classic() +
+      labs(title = "Figure 3D. Organoid cell clusters",
+           x = "tSNE 1", y = "tSNE 2",
+           shape = "Stage / Region")
   })
   
   
 
   ### Original pipeline figure 3E graph
-  #Convert user gene selection into correct gene id
-  features_3E <- reactive({
-    switch(input$original3E_featureSelect,
-           "FOXG1" = originalDF_3E$gene_ids_fig3E[1],
-           "OTX2" = originalDF_3E$gene_ids_fig3E[2],
-           "RSPO2" = originalDF_3E$gene_ids_fig3E[3],
-           "DCN" = originalDF_3E$gene_ids_fig3E[4],
-           "ASPM" = originalDF_3E$gene_ids_fig3E[5],
-           "LIN28A" = originalDF_3E$gene_ids_fig3E[6],
-           "MYT1L" = originalDF_3E$gene_ids_fig3E[7],
-           "NEUROD6" = originalDF_3E$gene_ids_fig3E[8])
-  })
+
   
-  # Generate a feature plot for the selected gene
   output$originalfig_3E <- renderPlotly({
-    OriginalPlotTwo <- FeaturePlot(
-      seu,
-      features = features_3E(),
-      reduction = "tsne",
-      dims = c(1,2),
-      
-      # User input of colour palette
-      cols = viridis_pal(option = input$og_3E_palette)(11),
-    )
-    
-    # Make selected gene name the title of the plot
-    OriginalPlotTwo <- OriginalPlotTwo + ggplot2::ggtitle(input$original3E_featureSelect)
+  fig3e <- FeaturePlot(
+    seurat_organoid,
+    features = input$original3E_featureSelect,
+    reduction = "tsne",
+    alpha = input$og_3E_alpha,
+    cols = viridis_pal(option = input$og_3E_palette)(5),
+    pt.size = 1,
+    order = TRUE,
+    ncol = 4,
+    slot = "data"
+  ) &
+    theme_classic() &
+    theme(plot.title = element_text(face = "italic", hjust = 0.5))
   })
   
   
   
   ### Original pipeline figure 3F graph
-  # Converts user input into correct dataframe
-  fig3F_df <- reactive({
-    switch(input$original3F_featureSelect,
-           "FOXG1" = FOXG1_3F,
-           "NEUROD6" = NEUROD6_3F,
-           "OTX2" = OTX2_3F)
-  })
-  
   # Plot original pipeline figure 3F
   output$originalfig_3F <- renderPlotly({
-    
-    # Ensure one dataframe is selected
-    req(fig3F_df())
-    ggplot(data = fig3F_df(), aes(x = region_group, y = expr)) +
-      geom_violin(
-        fill = "grey70",    # violin fill color
-        color = "black",    # outline color
-        trim = FALSE,       # show full distribution tails
-        width = 0.8,
-        adjust = 1.5,       # smoothing factor
-        scale = "width"     # normalize widths across groups
-      ) +
-      geom_jitter(
-        width = 0.12,       # horizontal jitter
-        height = 0,
-        size = 0.3,
-        alpha = 0.35,
-        color = "black"
-      ) +
-      ggtitle(input$original3F_featureSelect) +      # use gene symbol as title
-      xlab(NULL) +
-      ylab("LOG2 FPKM") +
-      
-      # Fix y-axis range for consistent comparison across genes
-      coord_cartesian(ylim = c(-1, 11), expand = FALSE) +
-      # Custom y-axis ticks and labels (sparse labeling for clarity)
-      scale_y_continuous(
-        breaks = c(0.5, 2.5, 5, 7.5, 9.5),
-        labels = c("", "0", "", "10", "")
-      ) +
-      # Apply clean theme and adjust styling
-      theme_bw() +
-      theme(
-        plot.title = element_text(face = "bold", hjust = 0.5, size = 10),
-        axis.text.x = element_text(size = 8),
-        axis.text.y = element_text(size = 8),
-        axis.title.y = element_text(size = 9),
-        panel.grid.major = element_line(color = "grey88", linewidth = 0.3),
-        panel.grid.minor = element_line(color = "grey94", linewidth = 0.2),
-        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6)
-      )
+    fig3f <- VlnPlot(seurat_3f,
+                     features = input$original3F_featureSelect,
+                     pt.size = 0.1,
+                     cols = viridis_pal(option = input$og_3F_palette)(5),
+                     layer = "data") &
+      theme_classic() &
+      labs(y = "log2(FPKM + 1)") &
+      theme(legend.position = "none")
+  
+  
   })
   
   # Plot alternative pipline figure 3D
@@ -709,23 +707,18 @@ server <- function(input, output) {
   #output$Alt_3E_Table <- renderDataTable({datatable(adata)}) 
   
   # Requires use of reticulate to run scanpy code
-  output$altfig_3E <- renderPlot({
-    sc$pl$dotplot(
-      adata,
-      markers_present,
-      groupby="cluster",
+  output$altfig_3E <- renderPlotly({
+    DotPlot(
+      scpy_data,
+      features = markers_present,
+      group.by = "cluster",
+      scale.by = "radius",
+      scale = TRUE,
+      dot.min = input$alt_3E_min,
+      dot.scale = input$alt_3E_max
+      #cols = viridis_pal(option = input$alt_3E_palette)(2)
       
-      # Interactive colour selection
-      cmap = input$alt_3E_palette,
-      
-      # Interactive minimum dot size selection
-      dot_min = input$alt_3E_min,
-      
-      # Interactive maximum dot size selection
-      dot_max = input$alt_3E_max,
-      
-      title="Marker gene expression per cluster"
-    )
+    ) + RotatedAxis()
 
   })
   
