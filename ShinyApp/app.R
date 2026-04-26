@@ -6,6 +6,7 @@
 # Last edited: 26/04/26. Tom
 
 library(shiny)
+library(shinyjs)
 #library(bslib)
 
 # Graph ploitting
@@ -107,7 +108,8 @@ figure_legend <- read.table("./files/figure_legends.txt", sep="\n",header=F)
 citation <- read.table("./files/citations.txt", sep="\n", header=F)
 
 # Reading in addition csvs
-Original3D_DF <- read.csv("./files/Original3D_DF.csv", header = TRUE, row.names = 1)
+Original3D_DF <- read.csv("./files/Original3D_DF.csv", header = TRUE)
+Original3D_DF <- dplyr::rename(Original3D_DF, ID = X)
 Original3E_DF <- read.csv("./files/Original3E_DF.csv", header = TRUE, row.names = 1)
 Original3F_DF_FOXG1 <- read.csv("./files/Original3F_DF_FOGG1.csv", header = TRUE, row.names = 1)
 Original3F_DF_NEUROD6 <- read.csv("./files/Original3F_DF_NEUROD6.csv", header = TRUE, row.names = 1)
@@ -120,6 +122,7 @@ alt3E_DF <- read.csv("./files/alt3E_DF.csv", header = TRUE, row.names = 1)
 
 ### ui tagList gives a nice page layout
 ui <- tagList(
+  useShinyjs(),
   navbarPage(
     
     # Website title
@@ -164,6 +167,8 @@ ui <- tagList(
                             
                             # # Display figure legend
                             column(2, paste(figure_legend[1,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -204,6 +209,8 @@ ui <- tagList(
                             
                             # Display figure legend
                             column(2, paste(figure_legend[2,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -244,6 +251,8 @@ ui <- tagList(
                             
                             # Display figure legend
                             column(2, paste(figure_legend[3,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           fluidRow(
                             column(2, selectizeInput( 
@@ -288,15 +297,23 @@ ui <- tagList(
                               
                               # Display figure legend
                               column(2, paste(figure_legend[4,])),
+                              
+                              column(2, actionButton("Reset_Button", "Reset All Inputs"))
                             ),
                             fluidRow(
-                              
                               # Slider for data point opacity
                               column(2, sliderInput(
                                 "og_3D_alpha", "Data point opacity",
                                 min = 0, max = 1,
                                 value = 1
+                              )),
+                              column(2, selectizeInput(
+                                "Original_3D_highlight",
+                                "Highlight Cell ID",
+                                Original3D_DF$ID,
+                                multiple = TRUE
                               ))
+                              
                             ),
                           
                           fluidRow(
@@ -328,6 +345,8 @@ ui <- tagList(
                             
                             # Display figure legend
                             column(2, paste(figure_legend[5,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -375,6 +394,8 @@ ui <- tagList(
                             
                             # Display figure legend
                             column(2, paste(figure_legend[6,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           fluidRow(
                             
@@ -415,6 +436,8 @@ ui <- tagList(
                             
                             # # Display figure legend
                             column(2, paste(figure_legend[7,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -457,6 +480,8 @@ ui <- tagList(
                             
                             # Display figure legend
                             column(2, paste(figure_legend[8,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           fluidRow(
                             column(2, selectizeInput( 
@@ -510,6 +535,8 @@ ui <- tagList(
                             
                             # # Display figure legend
                             column(2, paste(figure_legend[9,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -551,6 +578,8 @@ ui <- tagList(
                             
                             # # Display figure legend
                             column(2, paste(figure_legend[10,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -592,6 +621,8 @@ ui <- tagList(
                             
                             # # Display figure legend
                             column(2, paste(figure_legend[11,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -641,6 +672,8 @@ ui <- tagList(
                             
                             # Display figure legend
                             column(2, paste(figure_legend[12,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -690,6 +723,8 @@ ui <- tagList(
                             
                             # Display figure legend
                             column(2, paste(figure_legend[13,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           fluidRow(
                             
@@ -737,6 +772,8 @@ ui <- tagList(
                             
                             # Display figure legend
                             column(2, paste(figure_legend[14,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           
@@ -778,6 +815,8 @@ ui <- tagList(
                             
                             # # Display figure legend
                             column(2, paste(figure_legend[15,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -819,6 +858,8 @@ ui <- tagList(
                             
                             # # Display figure legend
                             column(2, paste(figure_legend[16,])),
+                            
+                            column(2, actionButton("Reset_Button", "Reset All Inputs"))
                           ),
                           
                           fluidRow(
@@ -865,6 +906,10 @@ ui <- tagList(
 ### SERVER ###
 
 server <- function(input, output) {
+  
+  observeEvent(input$Reset_Button, {
+    reset()
+  })
   
   ### Original pipeline 2A graph
   # Show interactive datatable for data plotted in original fig 2A
@@ -951,6 +996,7 @@ server <- function(input, output) {
   # Show interactive datatable for data plotted in original fig 3D
   output$Og_3D_Table <- renderDataTable({datatable(Original3D_DF)}) 
   
+  test <- c("!","£")
   # Plot original 3D graph
   output$originalfig_3D <- renderPlotly({
     fig3d <- DimPlot(seurat_organoid,
@@ -959,6 +1005,7 @@ server <- function(input, output) {
                      label.size = 3,
                      pt.size = 1.5,
                      repel = TRUE,
+                     cells.highlight = input$Original_3D_highlight,
                      cols = viridis_pal(option = input$og_3D_palette)(11),
                      alpha = input$og_3D_alpha,
                      shape.by = "shape_group") +
