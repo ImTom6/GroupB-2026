@@ -45,14 +45,29 @@ Run in order of top to bottom:
 | `expression_matrix.py` | Merge Cufflinks outputs into a unified expression matrix |
 | `v5_steered.R` | Seurat analysis (PCA, clustering, t-SNE, marker genes) | 
 
-## Software Versions
+## Requirements
 
-| Tools | Version |
-|------|--------|
-| SRA Toolkit | latest |
-| TopHat2 | 2.1.x |
-| Cufflinks | 2.2.x |
-| Python | 3. and 2.7x |
-| R | 4.5.x |
-| Seurat | v5 |
+- HPC cluster with SLURM job scheduler for alignment step
+- Minimum 32GB RAM recommended for Seurat analysis
+- R packages: Seurat, ggplot2, dplyr, data.table, ggdendro, patchwork
+
+Install R packages with:
+```r
+install.packages(c("Seurat", "ggplot2", "dplyr", 
+                   "data.table", "ggdendro", "patchwork"))
+```
+
+---
+
+## Software Versions
+| Tool | Version |
+|------|---------|
+| SRA Toolkit | 3.0.7 |
+| TopHat2 | 2.1.1 |
+| Cufflinks | 2.2.1 |
+| Bowtie2 | 2.4.4 |
+| Python | 3.9 |
+| R | 4.5.2 |
+| Seurat | 5.0 | 
+
 
