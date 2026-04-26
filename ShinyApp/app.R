@@ -6,15 +6,16 @@
 # Last edited: 24/04/26. Tom
 
 library(shiny)
-#library(bslib)
+library(bslib)
 library(ggplot2)
 library(plotly)
 library(Seurat)
-#library(patchwork)
-#library(stringr)
-#library(dplyr)
+library(patchwork)
+library(stringr)
+library(dplyr)
 library(viridis)
 library(DT)
+#library(scater)
 
 
 ### PREPARATION ###
@@ -27,6 +28,9 @@ original2A_DF <- read.csv("./files/Original2A.csv", header = TRUE, row.names = 1
 
 ### Preparation for original figure 2B (Zones)
 original2B_Zones_DF <- read.csv("./files/Original2B_Zones.csv", header = TRUE, row.names = 1)
+
+### Preparation for original figure 2B (Genes)
+original2B_DF <- read.csv("./files/Figure2_cells.csv", row.names = 1)
 
 ### Preparation for original figure 3D, 3E
 seurat_organoid <- readRDS("./files/Camp2015_organoid_final.rds")
@@ -44,12 +48,28 @@ genes_3f <- genes_3f[genes_3f %in% rownames(seurat_3f)]
 Idents(seurat_3f) <- factor(seurat_3f$region_group,
                             levels = c("r1","r2","r3","r4","fetal"))
 
+
+### Preparation for original figure 4A
+original4A_DF <- read.csv("./files/Figure4_monocle_coordinates.csv", header = TRUE, row.names = 1)
+
+### Preparation for original figure 4B
+original4B_DF <- read.csv("./files/Figure4_cells.csv", row.names = 1)
+
+
+### Preparation for alternative figure 2A and 2B (Zones)
+alt2a <- read.csv("./files/Alt2A.csv", header = TRUE, row.names = 1)
+
+### Preparation for alternative figure 2A and 2B (Zones)
+alt2b_zones <- read.csv("./files/Alt2B_zones.csv", header = TRUE, row.names = 1)
+
+### Preparation for alternative figure 2B (Genes)
+alt2B_DF <- read.csv("./files/Figure2_Slingshot_coordinates.csv", row.names = 1)
+
 ### Preparation for alternative figure 3D
 # Load alternate scanpy pipeline output to plot alt tsne graph
 altpipeline_tsne <- read.csv("./files/export_tsne.csv")
 
 ### Preparation for alternate figure 3E
-# This requires the use of anndata.
 scpy_data <- readRDS("./files/scpy_data.rds")
 
 # Markers identified from scanpy pipeline
@@ -66,9 +86,15 @@ FOXG1_Alt_3F <- select(df_alt3F, c('FOXG1','group'))
 NEUROD6_Alt_3F <- select(df_alt3F, c('NEUROD6','group'))
 OTX2_Alt_3F<- select(df_alt3F, c('OTX2','group'))
 
-FOXG1_Alt_3F <- rename(FOXG1_Alt_3F, expr = FOXG1, region_group = group)
-NEUROD6_Alt_3F <- rename(NEUROD6_Alt_3F, expr = NEUROD6, region_group = group)
-OTX2_Alt_3F <- rename(OTX2_Alt_3F, expr = OTX2, region_group = group)
+FOXG1_Alt_3F <- dplyr::rename(FOXG1_Alt_3F, expr = FOXG1, region_group = group)
+NEUROD6_Alt_3F <- dplyr::rename(NEUROD6_Alt_3F, expr = NEUROD6, region_group = group)
+OTX2_Alt_3F <- dplyr::rename(OTX2_Alt_3F, expr = OTX2, region_group = group)
+
+### Preparation for alternative figure 4A
+alt4a <- read.csv("./files/Alt4A.csv", header = TRUE, row.names = 1)
+
+### Preparation for alternative figure 4B 
+alt4B_DF <- read.csv("./files/Figure4_Slingshot_coordinates.csv", row.names = 1)
 
 # All figure legends are saved into a txt, this can be loaded into a dataframe with each row representing a different legend
 figure_legend <- read.table("./files/figure_legends.txt", sep="\n",header=F)
@@ -145,7 +171,7 @@ ui <- tagList(
                             column(5, plotlyOutput("originalfig_Zones_2B")),
                             
                             # Display figure legend
-                            column(2, paste(figure_legend[1,])),
+                            column(2, paste(figure_legend[2,])),
                           ),
                           
                           fluidRow(
@@ -172,6 +198,50 @@ ui <- tagList(
                             column(12, paste(citation[1,]))
                           ),),
                  
+                 tabPanel("Figure 2B (Genes)",
+                          fluidRow(
+
+                            # Select colour palette
+                            column(2, radioButtons(
+                              "og_2B_palette", "Select Colour Palette",
+                              choices = colour_palette, selected = colour_palette[4],
+                            )),
+
+                            # Plot figure
+                            column(5, plotlyOutput("originalfig_2B")),
+                            
+                            # Display figure legend
+                            column(2, paste(figure_legend[3,])),
+                          ),
+                          fluidRow(
+                            column(2, selectizeInput( 
+                              "original2B_featureSelect", 
+                              "Select Gene:", 
+                              choices = c("SOX2", "EOMES", "MYT1L"),
+                              multiple = FALSE)),
+                            
+                            column(2, sliderInput(
+                              "og_2B_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
+                            
+                          ),
+                          
+                          fluidRow(
+                            column(6, paste("Data Table"))
+                          ),
+                          
+                          # Show data frame used to plot figure
+                          fluidRow(
+                            column(12, dataTableOutput("Og_2B_Table"))
+                          ),
+                          
+                          # Bottom of page original paper credit
+                          fluidRow(
+                            column(12, paste(citation[1,]))
+                          ),),
+                 
                  tabPanel("Figure 3D",
                           fluidRow(
                             
@@ -185,15 +255,9 @@ ui <- tagList(
                               column(5, plotlyOutput("originalfig_3D")),
                               
                               # Display figure legend
-                              column(2, paste(figure_legend[1,])),
+                              column(2, paste(figure_legend[4,])),
                             ),
                             fluidRow(
-                              
-                              # Colour based on different groupings
-                              column(2, selectInput("originalpipeline_colour", "Colour by:",
-                                                    choices = c("Cluster" = "cluster_code",
-                                                                "Experiment" = "shape_group",
-                                                                "Stage" = "day"))),
                               
                               # Slider for data point opacity
                               column(2, sliderInput(
@@ -231,7 +295,7 @@ ui <- tagList(
                             column(5, plotlyOutput("originalfig_3E")),
                             
                             # Display figure legend
-                            column(2, paste(figure_legend[2,])),
+                            column(2, paste(figure_legend[5,])),
                           ),
                           
                           fluidRow(
@@ -278,7 +342,7 @@ ui <- tagList(
                             column(5,plotlyOutput("originalfig_3F")),
                             
                             # Display figure legend
-                            column(2, paste(figure_legend[3,])),
+                            column(2, paste(figure_legend[6,])),
                           ),
                           fluidRow(
                             
@@ -303,6 +367,93 @@ ui <- tagList(
                           fluidRow(
                             column(12, paste(citation[1,])),
                           ),),
+                 
+                 # Original pipeline figure 4A graph
+                 tabPanel("Figure 4A",
+                          fluidRow(
+                            
+                            # Select colour palette
+                            column(2, radioButtons(
+                              "og_4A_palette", "Select Colour Palette",
+                              choices = colour_palette, selected = colour_palette[4],
+                            )),
+                            
+                            # Plot figure
+                            column(5, plotlyOutput("originalfig_4A")),
+                            
+                            # # Display figure legend
+                            column(2, paste(figure_legend[7,])),
+                          ),
+                          
+                          fluidRow(
+                            
+                            # Slider for data point opacity
+                            column(2, sliderInput(
+                              "og_4A_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
+                          ),
+                          
+                          fluidRow(
+                            column(6, paste("Data Table"))
+                          ),
+                          
+                          # Show data frame used to plot figure
+                          fluidRow(
+                            column(12, dataTableOutput("Og_4A_Table"))
+                          ),
+                          
+                          # Bottom of page original paper credit
+                          fluidRow(
+                            column(12, paste(citation[1,]))
+                          ),),
+                 
+                 
+                 # Original figure 4B
+                 tabPanel("Figure 4B",
+                          fluidRow(
+                            
+                            # Select colour palette
+                            column(2, radioButtons(
+                              "og_4B_palette", "Select Colour Palette",
+                              choices = colour_palette, selected = colour_palette[4],
+                            )),
+                            
+                            # Plot figure
+                            column(5, plotlyOutput("originalfig_4B")),
+                            
+                            # Display figure legend
+                            column(2, paste(figure_legend[8,])),
+                          ),
+                          fluidRow(
+                            column(2, selectizeInput( 
+                              "original4B_featureSelect", 
+                              "Select Gene:", 
+                              choices = c("PAX6", "EOMES", "MYT1L"),
+                              multiple = FALSE)),
+                            
+                            column(2, sliderInput(
+                              "og_4B_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
+                            
+                          ),
+                          
+                          fluidRow(
+                            column(6, paste("Data Table"))
+                          ),
+                          
+                          # Show data frame used to plot figure
+                          fluidRow(
+                            column(12, dataTableOutput("Og_4B_Table"))
+                          ),
+                          
+                          # Bottom of page original paper credit
+                          fluidRow(
+                            column(12, paste(citation[1,]))
+                          ),),
 
                ))
              ),
@@ -312,7 +463,7 @@ ui <- tagList(
              fluidPage(
                tabsetPanel(
                  
-                 # Alternative pipeline figure 3D
+                 # Alternative pipeline figure 2A
                  tabPanel("Figure 2A",
                           fluidRow(
                             
@@ -326,7 +477,7 @@ ui <- tagList(
                             column(5, plotlyOutput("altfig_2A")),
                             
                             # # Display figure legend
-                            column(2, paste(figure_legend[1,])),
+                            column(2, paste(figure_legend[9,])),
                           ),
                           
                           fluidRow(
@@ -350,10 +501,11 @@ ui <- tagList(
                           
                           # Bottom of page original paper credit
                           fluidRow(
-                            column(12, paste(citation[1,]))
+                            column(12, paste(citation[2,]))
                           ),),
                  
-                 tabPanel("Figure 2B",
+                 # Alternative pipeline figure 2B
+                 tabPanel("Figure 2B (Zones)",
                           fluidRow(
                             
                             # Select colour palette
@@ -366,14 +518,14 @@ ui <- tagList(
                             column(5, plotlyOutput("alt_fig_2B_zone")),
                             
                             # # Display figure legend
-                            column(2, paste(figure_legend[1,])),
+                            column(2, paste(figure_legend[10,])),
                           ),
                           
                           fluidRow(
                             
                             # Slider for data point opacity
                             column(2, sliderInput(
-                              "alt_2A_zone_alpha", "Data point opacity",
+                              "alt_2B_zone_alpha", "Data point opacity",
                               min = 0, max = 1,
                               value = 1
                             ))
@@ -385,14 +537,64 @@ ui <- tagList(
                           
                           # Show data frame used to plot figure
                           fluidRow(
-                            column(12, dataTableOutput("alt_2A_zone_Table"))
+                            column(12, dataTableOutput("alt_2B_zone_Table"))
                           ),
                           
                           # Bottom of page original paper credit
                           fluidRow(
-                            column(12, paste(citation[1,]))
+                            column(12, paste(citation[2,]))
                           ),),
                  
+                 # Alternative pipeline figure 2B
+                 tabPanel("Figure 2B (Genes)",
+                          fluidRow(
+                            
+                            # Select colour palette
+                            column(2, radioButtons(
+                              "alt_2B_palette", "Select Colour Palette",
+                              choices = colour_palette, selected = colour_palette[4],
+                            )),
+
+                            # Plot figure
+                            column(5, plotlyOutput("altfig_2B")),
+                            
+                            # # Display figure legend
+                            column(2, paste(figure_legend[11,])),
+                          ),
+                          
+                          fluidRow(
+                            
+                            # Select gene
+                            column(2, selectizeInput( 
+                              "alternate2B_featureSelect", 
+                              "Select Gene:", 
+                              choices = c("SOX2", "EOMES", "MYT1L"),
+                              multiple = FALSE)),
+                            
+                            # Slider for data point opacity
+                            column(2, sliderInput(
+                              "alt_2B_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
+                            
+                          ),
+                          
+                          fluidRow(
+                            column(6, paste("Data Table"))
+                          ),
+                          
+                          # Show data frame used to plot figure
+                          fluidRow(
+                            column(12, dataTableOutput("alt_2B_Table"))
+                          ),
+                          
+                          # Bottom of page original paper credit
+                          fluidRow(
+                            column(12, paste(citation[2,]))
+                          ),),
+
+                 # Alternative pipeline figure 3D
                  tabPanel("Figure 3D",
                           fluidRow(
                             
@@ -406,7 +608,7 @@ ui <- tagList(
                             column(5, plotlyOutput("altfig_3D")),
                             
                             # Display figure legend
-                            column(2, paste(figure_legend[4,])),
+                            column(2, paste(figure_legend[12,])),
                           ),
                           
                           fluidRow(
@@ -455,7 +657,7 @@ ui <- tagList(
                             column(5, plotlyOutput("altfig_3E")),
                             
                             # Display figure legend
-                            column(2, paste(figure_legend[5,])),
+                            column(2, paste(figure_legend[13,])),
                           ),
                           fluidRow(
                             
@@ -502,7 +704,7 @@ ui <- tagList(
                             column(5, plotlyOutput("alternatefig_3F")),
                             
                             # Display figure legend
-                            column(2, paste(figure_legend[6,])),
+                            column(2, paste(figure_legend[14,])),
                           ),
                           
                           
@@ -528,8 +730,97 @@ ui <- tagList(
                           fluidRow(
                             column(12, paste(citation[2,])),
                           ),),
-                      ))),
-    
+                 
+                 # Alternative pipeline figure 4A
+                 tabPanel("Figure 4A",
+                          fluidRow(
+                            
+                            # Select colour palette
+                            column(2, radioButtons(
+                              "alt_4A_palette", "Select Colour Palette",
+                              choices = colour_palette, selected = colour_palette[4],
+                            )),
+                            
+                            # Plot figure
+                            column(5, plotlyOutput("altfig_4A")),
+                            
+                            # # Display figure legend
+                            column(2, paste(figure_legend[15,])),
+                          ),
+                          
+                          fluidRow(
+                            
+                            # Slider for data point opacity
+                            column(2, sliderInput(
+                              "alt_4A_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
+                          ),
+                          
+                          fluidRow(
+                            column(6, paste("Data Table"))
+                          ),
+                          
+                          # Show data frame used to plot figure
+                          fluidRow(
+                            column(12, dataTableOutput("alt_4A_Table"))
+                          ),
+                          
+                          # Bottom of page original paper credit
+                          fluidRow(
+                            column(12, paste(citation[2,]))
+                          ),),
+                 
+                 # Alternative pipeline figure 4B
+                 tabPanel("Figure 4B",
+                          fluidRow(
+                            
+                            # Select colour palette
+                            column(2, radioButtons(
+                              "alt_4B_palette", "Select Colour Palette",
+                              choices = colour_palette, selected = colour_palette[4],
+                            )),
+                            
+                            # Plot figure
+                            column(5, plotlyOutput("altfig_4B")),
+                            
+                            # # Display figure legend
+                            column(2, paste(figure_legend[16,])),
+                          ),
+                          
+                          fluidRow(
+                            
+                            # Select gene
+                            column(2, selectizeInput( 
+                              "alternate4B_featureSelect", 
+                              "Select Gene:", 
+                              choices = c("PAX6", "EOMES", "MYT1L"),
+                              multiple = FALSE)),
+                            
+                            # Slider for data point opacity
+                            column(2, sliderInput(
+                              "alt_4B_alpha", "Data point opacity",
+                              min = 0, max = 1,
+                              value = 1
+                            ))
+                            
+                          ),
+                          
+                          fluidRow(
+                            column(6, paste("Data Table"))
+                          ),
+                          
+                          # Show data frame used to plot figure
+                          fluidRow(
+                            column(12, dataTableOutput("alt_4B_Table"))
+                          ),
+                          
+                          # Bottom of page original paper credit
+                          fluidRow(
+                            column(12, paste(citation[2,]))
+                          ),),
+               ))),
     # Final tab to give credit to group members and original paper authors
     tabPanel("Credit",
              fluidPage(
@@ -602,6 +893,34 @@ server <- function(input, output) {
     
   })
   
+  ### Original pipeline 2B (Genes)
+  
+  og_fig2b_df <- reactive({
+    switch(input$original2B_featureSelect,
+           "SOX2" = original2B_DF$SOX2,
+           "EOMES" = original2B_DF$EOMES,
+           "MYT1L" = original2B_DF$MYT1L)
+  })
+  
+  output$Og_2B_Table <- renderDataTable({datatable(original2B_DF)})
+  
+  output$originalfig_2B <- renderPlotly({
+    req(og_fig2b_df())
+    plot_ly(original2B_DF, 
+            x = original2B_DF$Component_1,
+            y = original2B_DF$Component_2,
+            # Colour data points based on their zone
+            color = og_fig2b_df(),
+            
+            # Get user input for colour palette 
+            colors = viridis_pal(option = input$og_2B_palette)(10),
+            type = "scatter",
+            mode = "markers",
+            alpha = input$og_2B_alpha
+    )
+    
+  })
+  
   ### Original pipeline figure 3D graph
   # Show interactive datatable for data plotted in original fig 3D
   output$Og_3D_Table <- renderDataTable({datatable(originalpipeline_tsne)}) 
@@ -632,7 +951,6 @@ server <- function(input, output) {
 
   ### Original pipeline figure 3E graph
 
-  
   output$originalfig_3E <- renderPlotly({
   fig3e <- FeaturePlot(
     seurat_organoid,
@@ -666,8 +984,146 @@ server <- function(input, output) {
   
   })
   
-  # Plot alternative pipline figure 3D
+  ### Original pipeline 4A graph
+  # Show interactive datatable for data plotted in original fig 2A
+  output$Og_4A_Table <- renderDataTable({datatable(original4A_DF)})
+  
+  # Plot original 4A graph
+  output$originalfig_4A <- renderPlotly({
+    original_4A_obj <- plot_ly(original4A_DF, 
+                               x = original4A_DF$Component_1,
+                               y = original4A_DF$Component_2,
+                               
+                               # Colour data points based on their label
+                               color = original4A_DF$paper_like_label,
+                               
+                               # User input for colour palette
+                               colors = viridis_pal(option = input$og_4A_palette)(7),
+                               type = "scatter",
+                               mode = "markers",
+                               
+                               # User input for data point opacity
+                               alpha = input$og_4A_alpha
+    ) |>
+      layout(xaxis = list(title = "Component 1"),
+             yaxis = list(title = "Component 2"))
+    
+  })
+  
+  ### Original pipeline 4B 
+  og_fig4b_df <- reactive({
+    switch(input$original4B_featureSelect,
+           "PAX6" = original4B_DF$PAX6,
+           "EOMES" = original4B_DF$EOMES,
+           "MYT1L" = original4B_DF$MYT1L)
+  })
+  
+  output$Og_4B_Table <- renderDataTable({datatable(original4B_DF)})
+  
+  output$originalfig_4B <- renderPlotly({
+    req(og_fig2b_df())
+    plot_ly(original4B_DF, 
+            x = original4B_DF$Component_1,
+            y = original4B_DF$Component_2,
+            # Colour data points based on their zone
+            color = og_fig4b_df(),
+            
+            # Get user input for colour palette 
+            colors = viridis_pal(option = input$og_4B_palette)(10),
+            type = "scatter",
+            mode = "markers",
+            alpha = input$og_4B_alpha
+    )
+    
+  })
+  
+  ### ALTERNATE GRAPHS ###
+  
+  ### Alternate pipeline 2A
+  # Display data table for alternate 2A data
+  output$alt_2A_Table <- renderDataTable({datatable(alt2a)}) 
+  # Plot alternate 2A figure
+  output$altfig_2A <- renderPlotly({
+    alt_2a_obj <- plot_ly(alt2a, 
+                           x = alt2a$X,
+                           y = alt2a$Y,
+                           
+                           # Colour data points based on their label
+                           color = alt2a$paper_state,
+                           
+                           # User input for colour palette
+                           colors = viridis_pal(option = input$alt_2A_palette)(7),
+                           type = "scatter",
+                           mode = "markers",
+                           
+                           # User input for data point opacity
+                           alpha = input$alt_2A_alpha
+    ) |>
+    # Add x and y axis titles
+    layout(xaxis = list(title = "Component 1"),
+           yaxis = list(title = "Component 2"))
+    
+  })
+  
+  ###Alternate pipeline 2B
+  # Display data table for alternate 2A data
+  output$alt_2B_zone_Table <- renderDataTable({datatable(alt2b_zones)}) 
+  # Plot alternate 2A figure
+  output$alt_fig_2B_zone <- renderPlotly({
+    alt_2b_zone_obj <- plot_ly(alt2b_zones , 
+                          x = alt2b_zones$X,
+                          y = alt2b_zones$Y,
+                          
+                          # Colour data points based on their label
+                          color = alt2b_zones$Zone,
+                          
+                          # User input for colour palette
+                          colors = viridis_pal(option = input$alt_2B_Zone_palette)(7),
+                          type = "scatter",
+                          mode = "markers",
+                          
+                          # User input for data point opacity
+                          alpha = input$alt_2B_zone_alpha
+    ) |>
+      # Add x and y axis titles
+      layout(xaxis = list(title = "Component 1"),
+             yaxis = list(title = "Component 2"))
+    
+  })
+  
+  ### Alternate pipeline 2B (Genes)
+  
+  alt_fig2b_df <- reactive({
+    switch(input$alternate2B_featureSelect,
+           "SOX2" = alt2B_DF$SOX2,
+           "EOMES" = alt2B_DF$EOMES,
+           "MYT1L" = alt2B_DF$MYT1L)
+  })
+  
+  output$alt_2B_Table <- renderDataTable({datatable(alt2B_DF)})
+  
+  output$altfig_2B <- renderPlotly({
+    req(alt_fig2b_df())
+    plot_ly(alt2B_DF, 
+            x = alt2B_DF$X,
+            y = alt2B_DF$Y,
+            # Colour data points based on their zone
+            color = alt_fig2b_df(),
+            
+            # Get user input for colour palette 
+            colors = viridis_pal(option = input$alt_2B_palette)(10),
+            type = "scatter",
+            mode = "markers",
+            alpha = input$alt_2B_alpha
+    )
+    
+  })
+  
+  ### Alternate pipeline 3D
+  
+  # Display datatable for alternate 3D data
   output$Alt_3D_Table <- renderDataTable({datatable(altpipeline_tsne)}) 
+  # Plot alternative pipline figure 3D
   output$altfig_3D <- renderPlotly({
     # Using plot_ly to render a similar graph to that of the original pipeline graph
     Alt_tSNEPlotlyObj <- plot_ly(altpipeline_tsne,
@@ -770,6 +1226,60 @@ server <- function(input, output) {
         axis.text.y = element_text(size = 8),
         axis.title.y = element_text(size = 9)
       ) 
+  })
+  
+  ### Alternate pipeline 4A
+  # Display data table for alternate 4A data
+  output$alt_4A_Table <- renderDataTable({datatable(alt4a)}) 
+  # Plot alternate 4A figure
+  output$altfig_4A <- renderPlotly({
+    alt_4a_obj <- plot_ly(alt4a, 
+                          x = alt4a$X,
+                          y = alt4a$Y,
+                          
+                          # Colour data points based on their label
+                          color = alt4a$paper_state,
+                          
+                          # User input for colour palette
+                          colors = viridis_pal(option = input$alt_4A_palette)(7),
+                          type = "scatter",
+                          mode = "markers",
+                          
+                          # User input for data point opacity
+                          alpha = input$alt_4A_alpha
+    ) |>
+      # Add x and y axis titles
+      layout(xaxis = list(title = "Component 1"),
+             yaxis = list(title = "Component 2"))
+    
+  })
+  
+  ### Alternate pipeline 4B
+  
+  alt_fig4b_df <- reactive({
+    switch(input$alternate4B_featureSelect,
+           "PAX6" = alt4B_DF$PAX6,
+           "EOMES" = alt4B_DF$EOMES,
+           "MYT1L" = alt4B_DF$MYT1L)
+  })
+  
+  output$alt_4B_Table <- renderDataTable({datatable(alt4B_DF)})
+  
+  output$altfig_4B <- renderPlotly({
+    req(alt_fig4b_df())
+    plot_ly(alt4B_DF, 
+            x = alt4B_DF$X,
+            y = alt4B_DF$Y,
+            # Colour data points based on their zone
+            color = alt_fig4b_df(),
+            
+            # Get user input for colour palette 
+            colors = viridis_pal(option = input$alt_4B_palette)(10),
+            type = "scatter",
+            mode = "markers",
+            alpha = input$alt_4B_alpha
+    )
+    
   })
 }
 
