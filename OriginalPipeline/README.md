@@ -51,9 +51,7 @@ Run in order of top to bottom:
 |------|--------|
 | SRA Toolkit | latest |
 | TopHat2 | 2.1.x |
-| Bowtie2 | compatible |
 | Cufflinks | 2.2.x |
-| SAMtools | 1.18 |
 | Python | 3. and 2.7x |
 | R | 4.5.x |
 | Seurat | v5 |
