@@ -34,3 +34,26 @@ Reference genome: **GENCODE GRCh38 release 22**
 ---
 
 ## Pipeline Overview
+Raw FASTQ (SRA)
+↓
+Conversion (fastq_convert.sh)
+↓
+Retry missing files (retry_missing_fastq.sh)
+↓
+GTF preprocessing (nochr.py)
+↓
+Alignment (TopHat2 via tophat_all2.slurm)
+↓
+Quantification (cufflinks_top.sh)
+↓
+Expression matrix construction (expression_matrix.py)
+↓
+Log₂(FPKM + 1) transformation
+↓
+Metadata integration
+↓
+Seurat analysis (v5_steered.R)
+↓
+Clustering + marker identification
+↓
+Figure generation (3D, 3E, 3F)
