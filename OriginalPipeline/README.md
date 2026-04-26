@@ -21,9 +21,8 @@ The original paper used **TopHat2 for alignment** and **Cufflinks for transcript
 Raw sequencing data: GEO accession [GSE75140](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE75140)
 
 - 734 single cells (508 organoid, 226 fetal neocortex)  
-- Paired-end reads (96–100 bp)  
-- Illumina HiSeq 2500  
-- Fluidigm C1 platform  
+- Paired-end reads   
+- Illumina   
 
 Reference genome: **GENCODE GRCh38 release 22**
 
