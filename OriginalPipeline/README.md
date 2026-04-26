@@ -34,11 +34,10 @@ Reference genome: **GENCODE GRCh38 release 22**
 ---
 
 ## Pipeline Overview
-Raw FASTQ (SRA)
+Raw FASTQ (SRA) -> Conversion (fastq_convert.sh) -> Retry missing files (retry_missing_fastq.sh)
+
 ↓
-Conversion (fastq_convert.sh)
-↓
-Retry missing files (retry_missing_fastq.sh)
+
 ↓
 GTF preprocessing (nochr.py)
 ↓
