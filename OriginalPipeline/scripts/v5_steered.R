@@ -1,4 +1,7 @@
-install.packages("ggdendro")
+# Script for Seurat-based scRNA-seq analysis and figure generation
+# Last edited: 27/04/2026. Rohit
+# Uses FPKM expression matrix and SRA metadata to perform PCA, clustering,
+# marker gene identification, and generate Figures 3D, 3E and 3F
 
 library(data.table)
 library(Seurat)
