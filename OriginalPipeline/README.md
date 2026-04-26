@@ -71,7 +71,7 @@ install.packages(c("Seurat", "ggplot2", "dplyr",
 
 ## Usage
 
-1. Download raw data and the metadata from SRA using accession SRP066834:(https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA304502&o=acc_s%3Aa)
+1. Download raw data and the metadata `SraRunTable.csv` from SRA using accession SRP066834:(https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA304502&o=acc_s%3Aa)
 2. Run scripts in order as listed in the Scripts table above
 3. Ensure reference genome and GTF are downloaded before running `tophat_all2.slurm`
 4. Output expression matrix will be saved as `expression_matrix_full.csv`
