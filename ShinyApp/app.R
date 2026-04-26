@@ -3,19 +3,23 @@
 # Preparation prepares necessary objects for different figures and surrounding information. This mostly involves reading in many files
 # UI creates the overall layout of the website and sets out a lot of the user interaction features
 # Server puts this all together to produce live updating graphs based on user input
-# Last edited: 24/04/26. Tom
+# Last edited: 26/04/26. Tom
 
 library(shiny)
-library(bslib)
+#library(bslib)
+
+# Graph ploitting
 library(ggplot2)
 library(plotly)
 library(Seurat)
-library(patchwork)
-library(stringr)
-library(dplyr)
 library(viridis)
 library(DT)
-#library(scater)
+#library(patchwork)
+#library(stringr)
+
+# Used to rename DF columns
+library(dplyr)
+
 
 
 ### PREPARATION ###
@@ -43,7 +47,7 @@ genes_3e <- c("FOXG1", "OTX2", "RSPO2", "DCN",
 seurat_3f <- readRDS("./files/Camp2015_fig3f.rds")
 
 genes_3f <- c("FOXG1", "NEUROD6", "OTX2")
-genes_3f <- genes_3f[genes_3f %in% rownames(seurat_3f)]
+#genes_3f <- genes_3f[genes_3f %in% rownames(seurat_3f)]
 
 Idents(seurat_3f) <- factor(seurat_3f$region_group,
                             levels = c("r1","r2","r3","r4","fetal"))
@@ -102,6 +106,15 @@ figure_legend <- read.table("./files/figure_legends.txt", sep="\n",header=F)
 # Text to be placed at bottom of each figure tab to credit original paper
 citation <- read.table("./files/citations.txt", sep="\n", header=F)
 
+# Reading in addition csvs
+Original3D_DF <- read.csv("./files/Original3D_DF.csv", header = TRUE, row.names = 1)
+Original3E_DF <- read.csv("./files/Original3E_DF.csv", header = TRUE, row.names = 1)
+Original3F_DF_FOXG1 <- read.csv("./files/Original3F_DF_FOGG1.csv", header = TRUE, row.names = 1)
+Original3F_DF_NEUROD6 <- read.csv("./files/Original3F_DF_NEUROD6.csv", header = TRUE, row.names = 1)
+Original3F_DF_OTX2 <- read.csv("./files/Original3F_DF_OTX2.csv", header = TRUE, row.names = 1)
+alt3E_DF <- read.csv("./files/alt3E_DF.csv", header = TRUE, row.names = 1)
+
+
 
 ### UI ###
 
@@ -111,6 +124,25 @@ ui <- tagList(
     
     # Website title
     "Group B",
+    
+    # Final tab to give credit to group members and original paper authors
+    tabPanel("Home",
+             fluidPage(
+               fluidRow(
+               column(6, paste("Welcome to the webpage for 2026s Group-B Group Project.")),
+               ),
+               fluidRow(
+                 column(6, paste("This project aims to replicate the findings of Camp et al. (2015). Camp, J.G. et al. (2015). Human cerebral organoids recapitulate gene expression programs of fetal neocortex development. PNAS, 112(51), pp.15672–15677.")),
+               ),
+               fluidRow(
+               column(6, paste("Tabs are available for either replicated original pipeline figures, or alternate pipeline figures.")),
+               ),
+               fluidRow(
+                 column(6, paste("Figures Replicated: 2A, 2B, 3D, 3E, 3F, 4A, 4B.")),
+               ),
+               fluidRow(
+               column(6, paste("This research used the ALICE High Performance Computing facility at the University of Leicester."))
+             ))),
     
     # Original pipeline tab
     tabPanel("Original Pipeline",
@@ -821,12 +853,6 @@ ui <- tagList(
                             column(12, paste(citation[2,]))
                           ),),
                ))),
-    # Final tab to give credit to group members and original paper authors
-    tabPanel("Credit",
-             fluidPage(
-               paste("Credit group members, authors, and github .This research used the ALICE High Performance Computing facility at the University of Leicester.")
-             )
-    )
 ))
 
 
@@ -923,7 +949,7 @@ server <- function(input, output) {
   
   ### Original pipeline figure 3D graph
   # Show interactive datatable for data plotted in original fig 3D
-  output$Og_3D_Table <- renderDataTable({datatable(originalpipeline_tsne)}) 
+  output$Og_3D_Table <- renderDataTable({datatable(Original3D_DF)}) 
   
   # Plot original 3D graph
   output$originalfig_3D <- renderPlotly({
@@ -950,7 +976,8 @@ server <- function(input, output) {
   
 
   ### Original pipeline figure 3E graph
-
+  output$Og_3E_Table <- renderDataTable({datatable(Original3E_DF)}) 
+  
   output$originalfig_3E <- renderPlotly({
   fig3e <- FeaturePlot(
     seurat_organoid,
@@ -969,7 +996,17 @@ server <- function(input, output) {
   
   
   
+  
   ### Original pipeline figure 3F graph
+  og_3F_options <- reactive({
+    switch(input$original3F_featureSelect,
+           "FOXG1" = Original3F_DF_FOXG1,
+           "NEUROD6" = Original3F_DF_NEUROD6,
+           "OTX2" = Original3F_DF_OTX2)
+  })
+  
+  output$Og_3F_Table <- renderDataTable({datatable(og_3F_options())}) 
+  
   # Plot original pipeline figure 3F
   output$originalfig_3F <- renderPlotly({
     fig3f <- VlnPlot(seurat_3f,
@@ -1160,7 +1197,7 @@ server <- function(input, output) {
   })
   
   # Plot alternative pipeline figure 3E
-  #output$Alt_3E_Table <- renderDataTable({datatable(adata)}) 
+  output$Alt_3E_Table <- renderDataTable({datatable(alt3E_DF)}) 
   
   # Requires use of reticulate to run scanpy code
   output$altfig_3E <- renderPlotly({
@@ -1172,9 +1209,9 @@ server <- function(input, output) {
       scale = TRUE,
       dot.min = input$alt_3E_min,
       dot.scale = input$alt_3E_max
-      #cols = viridis_pal(option = input$alt_3E_palette)(2)
       
-    ) + RotatedAxis()
+    ) + RotatedAxis() +
+      scale_color_viridis_c(option = input$alt_3E_palette)
 
   })
   
