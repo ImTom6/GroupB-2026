@@ -6,7 +6,7 @@
 - ShinyApp contains app.R. All necessary files referenced within this script can be found on the LAMP (/local/ShinyApp/files).
 
 
-- All large files that are not directly used on the shiny server are stored within lamp (/local/ShinyApp/files/additional_files).
+- All large files that are not directly used on the shiny server are stored within lamp (/local/shiny/files/additional_files).
 
 - This project follows the work of Camp, J.G. et al. (2015). Human cerebral organoids recapitulate gene expression programs of fetal neocortex development. PNAS, 112(51), pp.15672–15677.
 
