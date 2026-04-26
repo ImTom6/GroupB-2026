@@ -33,7 +33,7 @@ Reference genome: **GENCODE GRCh38 release 22**
 
 ---
 
-## Scipts 
+## Scripts 
 Run in order of top to bottom:
 | Script | Description |
 |--------|------------|
@@ -43,5 +43,18 @@ Run in order of top to bottom:
 | `tophat_all2.slurm` | Align reads to GRCh38 using TopHat2 (HPC job script) |
 | `cufflinks_top.sh` | Quantify gene expression (FPKM values) |
 | `expression_matrix.py` | Merge Cufflinks outputs into a unified expression matrix |
-| `v5_steered.R` | Seurat analysis (PCA, clustering, t-SNE, marker genes) |
+| `v5_steered.R` | Seurat analysis (PCA, clustering, t-SNE, marker genes) | 
+
+## Software Versions
+
+| Tools | Version |
+|------|--------|
+| SRA Toolkit | latest |
+| TopHat2 | 2.1.x |
+| Bowtie2 | compatible |
+| Cufflinks | 2.2.x |
+| SAMtools | 1.18 |
+| Python | 3. and 2.7x |
+| R | 4.5.x |
+| Seurat | v5 |
 
