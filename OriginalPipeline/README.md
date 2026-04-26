@@ -6,7 +6,7 @@
 
 ## Overview
 
-This repository contains the **original RNA-seq pipeline** used to erreplicate Figure 3D from:
+This repository contains the **original RNA-seq pipeline** used to replicate Figure 3D from:
 
 > Camp, J.G. et al. (2015). *Human cerebral organoids recapitulate gene expression programs of fetal neocortex development*.  
 > PNAS, 112(51), 15672–15677.  
