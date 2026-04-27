@@ -76,6 +76,7 @@ install.packages(c("Seurat", "ggplot2", "dplyr",
 3. Ensure reference genome and GTF are downloaded before running `tophat_all2.slurm`
 4. Output expression matrix will be saved as `expression_matrix_full.csv`
 5. Load `expression_matrix_full.csv` and `SraRunTable.csv` into `v5_steered.R` for clustering analysis
+6. Any large files needed for `v5_steered.R` can be found on our Lamp Server.
 
 ## Citation 
 Camp, J.G. et al. (2015) 'Human cerebral organoids recapitulate gene expression programs of fetal neocortex development', Proceedings of the National Academy of Sciences of the United States of America, 112(51), pp. 15672–15677. Available at: https://doi.org/10.1073/pnas.1520760112 . 
